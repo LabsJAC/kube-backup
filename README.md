@@ -1,7 +1,6 @@
 kube-backup
 ===========
-[![Docker Repository on Quay](https://quay.io/repository/plange/kube-backup/status "Docker Repository on Quay")](https://quay.io/repository/plange/kube-backup)
-[![Docker Repository on Docker Hub](https://img.shields.io/docker/automated/ptlange/kube-backup.svg "Docker Repository on Docker Hub")](https://hub.docker.com/r/ptlange/kube-backup/)
+
 
 Quick 'n dirty kubernetes state backup script, designed to be ran as kubernetes Job. Think of it like [RANCID](http://www.shrubbery.net/rancid/) for kubernetes.
 
@@ -65,82 +64,6 @@ Optional:
   * Modify the snapshot frequency in `spec.schedule` using the [cron format](https://en.wikipedia.org/wiki/Cron).
   * Modify the number of successful and failed finished jobs to retain in `spec.successfulJobsHistoryLimit` and `spec.failedJobsHistoryLimit`.
   * If using RBAC (1.6+), use the ClusterRole and ClusterRoleBindings in rbac.yaml.
-
-git-crypt
----------
-For security reasons `Secret` objects are not exported by default. However there is a possibility to store them safely using the [git-crypt project](https://github.com/AGWA/git-crypt).
-
-#### Prerequisites
-Your repository has to be already initialized with git-crypt. Minimal configuration is listed below. For details and full information see [using git-crypt](https://github.com/AGWA/git-crypt#using-git-crypt).
-
-```
-cd repo
-git-crypt init
-cat <<EOF > .gitattributes
-*.secret.yaml filter=git-crypt diff=git-crypt
-.gitattributes !filter !diff
-EOF
-git-crypt add-gpg-user <USER_ID>
-git add -A
-git commit -a -m "initialize git-crypt"
-```
-
-Optional:
-  * You may choose any subdirectory for storing .gitattributes file (useful when using `GIT_PREFIX_PATH`).
-  * You may encrypt additional files other than secret.yaml. Add additional lines before the .gitattribute filter. You may also use wildcard `*` to encrypt all files within the directory.
-
-#### Enable git-crypt
-To enable encryption feature:
-  * Set pod environment variable `GITCRYPT_ENABLE` to `true`
-    ```
-    spec:
-      containers:
-      - env:
-        - name: GITCRYPT_ENABLE
-          value: "true"
-    ```
-  * Create additional `Secret` object containing **either** gpg-private or symmetric key
-    ```
-    apiVersion: v1
-    kind: Secret
-    metadata:
-      name: kube-backup-gpg
-      namespace: kube-system
-    data:
-      gpg-private.key: <base64_encoded_key>
-      symmetric.key: <base64_encoded_key>
-    ```
-  * Mount keys from `Secret` as additional volume
-    ```
-    spec:
-      containers:
-      - volumeMounts:
-        - mountPath: /secrets
-          name: gpgkey
-      volumes:
-      - name: gpgkey
-        secret:
-          defaultMode: 420
-          secretName: kube-backup-gpg
-    ```
-  * Add secret object name to `RESOURCETYPES` variable
-    ```
-    spec:
-      containers:
-      - env:
-        - name: RESOURCETYPES
-          value: "ingress deployment configmap secret svc rc ds thirdpartyresource networkpolicy statefulset storageclass cronjob"
-    ```
-  * If using RBAC (1.6+), add `secrets` to `resources`
-    ```
-    rules:
-    - apiGroups: ["*"]
-      resources: [
-        "configmaps",
-        "secrets",
-    ```
-
-  * (Optional): `$GITCRYPT_PRIVATE_KEY` and `$GITCRYPT_SYMMETRIC_KEY` variables are the combination of path where `Secret` volume is mounted and the name of item key from that object. If you change any value of them from the above example you may need to set this variables accordingly.
 
 
 Result
